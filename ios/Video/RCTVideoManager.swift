@@ -37,6 +37,13 @@ class RCTVideoManager: RCTViewManager {
         })
     }
 
+    @objc(setPreferredMaxResolutionCmd:resolution:)
+    func setPreferredMaxResolutionCmd(_ reactTag: NSNumber, resolution: NSDictionary?) {
+        performOnVideoView(withReactTag: reactTag, callback: { videoView in
+            videoView?.setPreferredMaxResolution(resolution)
+        })
+    }
+
     @objc(setLicenseResultCmd:license:licenseUrl:)
     func setLicenseResultCmd(_ reactTag: NSNumber, license: NSString, licenseUrl: NSString) {
         performOnVideoView(withReactTag: reactTag, callback: { videoView in

@@ -8,6 +8,21 @@ import React
 
 // MARK: - RCTVideo
 
+struct PreferredResolution {
+    let width: CGFloat
+    let height: CGFloat
+
+    init?(from dictionary: NSDictionary?) {
+        guard let dict = dictionary,
+              let width = dict["width"] as? CGFloat,
+              let height = dict["height"] as? CGFloat else {
+            return nil
+        }
+        self.width = width
+        self.height = height
+    }
+}
+
 class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverHandler {
     private var _player: AVPlayer?
     private var _playerItem: AVPlayerItem?
@@ -17,6 +32,8 @@ class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverH
 
     private var _playerViewController: RCTVideoPlayerViewController?
     private var _videoURL: NSURL?
+    private var _preferredMaxResolution: PreferredResolution?
+    
 
     /* Required to publish events */
     private var _eventDispatcher: RCTEventDispatcher?
@@ -134,6 +151,24 @@ class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverH
     @objc var onTextTracks: RCTDirectEventBlock?
     @objc var onAudioTracks: RCTDirectEventBlock?
     @objc var onTextTrackDataChanged: RCTDirectEventBlock?
+
+    private func applyPreferredMaxResolution(to playerItem: AVPlayerItem) {
+        if #available(iOS 11.0, *) {
+            if let resolution = _preferredMaxResolution {
+                playerItem.preferredMaximumResolution = CGSize(width: resolution.width, height: resolution.height)
+            } else {
+                playerItem.preferredMaximumResolution = CGSize.zero // Reset to default (highest available)
+            }
+        }
+    }
+
+    @objc
+    func setPreferredMaxResolution(_ resolution: NSDictionary?) {
+        _preferredMaxResolution = PreferredResolution(from: resolution)
+        if let playerItem = _playerItem {
+            applyPreferredMaxResolution(to: playerItem)
+        }
+    }
 
     @objc
     func _onPictureInPictureEnter() {
@@ -487,6 +522,8 @@ class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverH
         if let maxBitRate = _maxBitRate {
             _playerItem?.preferredPeakBitRate = Double(maxBitRate)
         }
+
+        applyPreferredMaxResolution(to: playerItem)
 
         if _player == nil {
             _player = AVPlayer()
