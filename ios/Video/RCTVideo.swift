@@ -155,12 +155,34 @@ class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverH
     private func applyPreferredMaxResolution(to playerItem: AVPlayerItem) {
         if #available(iOS 11.0, *) {
             if let resolution = _preferredMaxResolution {
-                playerItem.preferredMaximumResolution = CGSize(width: resolution.width, height: resolution.height)
-            } else {
-                playerItem.preferredMaximumResolution = CGSize.zero // Reset to default (highest available)
+                let size = CGSize(width: resolution.width, height: resolution.height)
+                // Only update if the resolution actually changed
+                if playerItem.preferredMaximumResolution != size {
+                playerItem.preferredMaximumResolution = size
+                // Notify that resolution preference was updated
+                if let onVideoPlaybackStateChanged = onVideoPlaybackStateChanged {
+                    onVideoPlaybackStateChanged([
+                        "maxResolution": [
+                            "width": resolution.width,
+                            "height": resolution.height
+                        ],
+                        "target": reactTag as Any
+                    ])
+                }
+            }
+            }
+        } else {
+            playerItem.preferredMaximumResolution = CGSize.zero // Reset to default
+            // Notify that resolution preference was reset
+            if let onVideoPlaybackStateChanged = onVideoPlaybackStateChanged {
+                onVideoPlaybackStateChanged([
+                    "maxResolution": nil,
+                    "target": reactTag as Any
+                ])
             }
         }
     }
+    
 
     @objc
     func setPreferredMaxResolution(_ resolution: NSDictionary?) {
@@ -1406,6 +1428,10 @@ class RCTVideo: UIView, RCTVideoPlayerViewControllerDelegate, RCTPlayerObserverH
 
         if _playerItem.status == .readyToPlay {
             handleReadyToPlay()
+            // Add resolution monitoring when player is ready
+            if #available(iOS 11.0, *), let resolution = _preferredMaxResolution {
+                applyPreferredMaxResolution(to: _playerItem)
+            }
         } else if _playerItem.status == .failed {
             handlePlaybackFailed()
         }
